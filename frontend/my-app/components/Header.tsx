@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import React from 'react';
 
 export default function Header() {
@@ -47,9 +48,9 @@ export default function Header() {
 
           {/* Nút Đăng nhập / Đăng ký */}
           <div className="flex items-center gap-5">
-            <a href="/login" className="text-[#74665B] text-sm font-semibold hover:text-[#6F4E37] transition-colors">
+            <Link href="/login" className="text-[#74665B] text-sm font-semibold hover:text-[#6F4E37] transition-colors">
               Đăng nhập
-            </a>
+            </Link>
             <a href="/register" className="bg-[#6F4E37] text-[#FFFFFF] text-sm px-6 py-2.5 rounded-lg font-semibold hover:bg-opacity-90 transition-all shadow-sm">
               Đăng ký
             </a>
