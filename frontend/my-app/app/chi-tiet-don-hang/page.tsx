@@ -1,4 +1,4 @@
-import OrderDetailPage from "../../components/chitietdonhang/OrderDetailPage";
+import OrderDetailPage from "../../components/pages/chitietdonhang/OrderDetailPage";
 
 export default function Page() {
   return <OrderDetailPage />;
