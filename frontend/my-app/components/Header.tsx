@@ -16,7 +16,7 @@ export default function Header() {
         {/* Phần 2: Menu điều hướng */}
         <nav className="flex gap-8 text-[#2B2118] font-semibold text-sm">
           <a href="/" className="hover:text-[#6F4E37] transition-colors">Trang chủ</a>
-          <a href="/menu" className="hover:text-[#6F4E37] transition-colors">Thực đơn</a>
+          <Link href="/thuc-don" className="hover:text-[#6F4E37] transition-colors">Thực đơn</Link>
           <a href="/promotions" className="hover:text-[#6F4E37] transition-colors">Khuyến mãi</a>
           <a href="/about" className="hover:text-[#6F4E37] transition-colors">Về chúng tôi</a>
           <a href="/contact" className="hover:text-[#6F4E37] transition-colors">Liên hệ</a>
