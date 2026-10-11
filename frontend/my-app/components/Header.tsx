@@ -9,17 +9,17 @@ export default function Header() {
       <header className="w-[1440px] px-10 py-5 flex items-center justify-between">
         
         {/* Phần 1: Logo */}
-        <a href="/" className="text-[#6F4E37] text-3xl font-bold font-serif tracking-wider">
+        <Link href="/" className="text-[#6F4E37] text-3xl font-bold font-serif tracking-wider">
           BrewLite
-        </a>
+        </Link>
 
         {/* Phần 2: Menu điều hướng */}
         <nav className="flex gap-8 text-[#2B2118] font-semibold text-sm">
-          <a href="/" className="hover:text-[#6F4E37] transition-colors">Trang chủ</a>
+          <Link href="/" className="hover:text-[#6F4E37] transition-colors">Trang chủ</Link>
           <Link href="/thuc-don" className="hover:text-[#6F4E37] transition-colors">Thực đơn</Link>
-          <a href="/promotions" className="hover:text-[#6F4E37] transition-colors">Khuyến mãi</a>
-          <a href="/about" className="hover:text-[#6F4E37] transition-colors">Về chúng tôi</a>
-          <a href="/contact" className="hover:text-[#6F4E37] transition-colors">Liên hệ</a>
+          <Link href="/promotions" className="hover:text-[#6F4E37] transition-colors">Khuyến mãi</Link>
+          <Link href="/about" className="hover:text-[#6F4E37] transition-colors">Về chúng tôi</Link>
+          <Link href="/contact" className="hover:text-[#6F4E37] transition-colors">Liên hệ</Link>
         </nav>
 
         {/* Phần 3: Công cụ & Tài khoản */}
@@ -34,8 +34,8 @@ export default function Header() {
               </svg>
             </button>
             
-            {/* Icon Giỏ hàng */}
-            <button className="hover:text-[#6F4E37] transition-colors relative">
+            {/* Icon Giỏ hàng - ĐÃ GẮN LINK ĐẾN TRANG GIỎ HÀNG */}
+            <Link href="/giohang" className="hover:text-[#6F4E37] transition-colors relative">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
@@ -43,7 +43,7 @@ export default function Header() {
               <span className="absolute -top-1.5 -right-2 bg-[#6F4E37] text-[#FFFFFF] text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
                 3
               </span>
-            </button>
+            </Link>
           </div>
 
           {/* Nút Đăng nhập / Đăng ký */}
@@ -51,9 +51,9 @@ export default function Header() {
             <Link href="/login" className="text-[#74665B] text-sm font-semibold hover:text-[#6F4E37] transition-colors">
               Đăng nhập
             </Link>
-            <a href="/register" className="bg-[#6F4E37] text-[#FFFFFF] text-sm px-6 py-2.5 rounded-lg font-semibold hover:bg-opacity-90 transition-all shadow-sm">
+            <Link href="/register" className="bg-[#6F4E37] text-[#FFFFFF] text-sm px-6 py-2.5 rounded-lg font-semibold hover:bg-opacity-90 transition-all shadow-sm">
               Đăng ký
-            </a>
+            </Link>
           </div>
           
         </div>
