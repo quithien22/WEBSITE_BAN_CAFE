@@ -328,8 +328,7 @@ export default function MenuPage() {
                                             return (
                                                 <label
                                                     key={topping.id}
-                                                    onClick={() => handleToggleTopping(topping.id)}
-                                                    className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border cursor-pointer transition-all ${isChecked
+                                                    className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border cursor-pointer select-none transition-all ${isChecked
                                                             ? 'border-[#6F4E37] bg-[#FDF9F5]'
                                                             : 'border-gray-200 hover:border-gray-300'
                                                         }`}
@@ -338,8 +337,8 @@ export default function MenuPage() {
                                                         <input
                                                             type="checkbox"
                                                             checked={isChecked}
-                                                            readOnly
-                                                            className="w-4 h-4 accent-[#53382c] rounded"
+                                                            onChange={() => handleToggleTopping(topping.id)}
+                                                            className="w-4 h-4 accent-[#53382c] rounded cursor-pointer"
                                                         />
                                                         <span className="text-xs sm:text-sm font-medium text-gray-800">
                                                             {topping.name}
