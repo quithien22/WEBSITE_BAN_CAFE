@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useCart } from '../../../context/CartContext';
 
 // Định nghĩa kiểu dữ liệu
 interface SizeOption {
@@ -109,6 +110,7 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 export default function MenuPage() {
+    const { addToCart } = useCart();
     const [selectedCategory, setSelectedCategory] = useState('Tất cả');
 
     // Quản lý Modal chi tiết món
@@ -156,7 +158,23 @@ export default function MenuPage() {
     // Thêm vào giỏ hàng
     const handleAddToCart = () => {
         if (!selectedProduct) return;
-        alert(`Đã thêm ${quantity}x "${selectedProduct.name}" vào giỏ hàng!`);
+
+        const selectedToppingObjs = selectedToppings
+            .map((id) => toppings.find((t) => t.id === id))
+            .filter(Boolean) as { id: string; name: string; price: number }[];
+
+        addToCart({
+            productId: selectedProduct.id,
+            name: selectedProduct.name,
+            image: selectedProduct.image,
+            sizeId: selectedSize,
+            sizeName: currentSizeObj ? currentSizeObj.name : 'Mặc định',
+            toppings: selectedToppingObjs,
+            price: unitPrice,
+            quantity: quantity,
+        });
+
+        
         handleCloseModal();
     };
 

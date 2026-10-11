@@ -1,66 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-
-interface CartItem {
-  id: number;
-  name: string;
-  size: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
+import { useCart } from '../../../context/CartContext';
 
 export default function CartPage() {
-  const [items, setItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      name: 'Cà phê Phin Sữa Tươi',
-      size: 'Size M',
-      price: 35000,
-      quantity: 2,
-      image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&auto=format&fit=crop&q=60',
-    },
-    {
-      id: 2,
-      name: 'Bạc Xỉu Đá Pha Phin',
-      size: 'Size L',
-      price: 39000,
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&auto=format&fit=crop&q=60',
-    },
-    {
-      id: 3,
-      name: 'Trà Sữa Cà Phê Macchiato',
-      size: 'Size M',
-      price: 45000,
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=400&auto=format&fit=crop&q=60',
-    },
-  ]);
-
-  const updateQuantity = (id: number, delta: number) => {
-    setItems((prev) =>
-      prev
-        .map((item) => {
-          if (item.id === id) {
-            const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as CartItem[]
-    );
-  };
-
-  const removeItem = (id: number) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shippingFee = items.length > 0 ? 15000 : 0;
-  const total = subtotal + shippingFee;
+  const {
+    items,
+    updateQuantity,
+    removeFromCart,
+    subtotal,
+    shippingFee,
+    totalPrice,
+  } = useCart();
 
   return (
     <div className="min-h-screen bg-stone-50 py-10 px-4 sm:px-6 lg:px-8">
@@ -87,8 +39,8 @@ export default function CartPage() {
             <h2 className="text-xl font-bold text-stone-800 mb-2">Giỏ hàng đang trống</h2>
             <p className="text-stone-500 mb-6">Hãy chọn thêm vài ly cafe thơm ngon nhé!</p>
             <Link
-              href="/"
-              className="inline-flex items-center px-6 py-3 bg-amber-900 hover:bg-amber-800 text-white font-medium rounded-xl transition"
+              href="/thuc-don"
+              className="inline-flex items-center px-6 py-3 bg-amber-900 hover:bg-amber-800 text-white font-medium rounded-xl transition shadow-sm"
             >
               Xem thực đơn ngay
             </Link>
@@ -98,7 +50,7 @@ export default function CartPage() {
             <div className="lg:col-span-2 space-y-4">
               {items.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.cartItemId}
                   className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-stone-200 flex flex-col sm:flex-row items-center gap-4 transition hover:shadow-md"
                 >
                   <img
@@ -109,15 +61,25 @@ export default function CartPage() {
 
                   <div className="flex-1 text-center sm:text-left">
                     <h3 className="font-bold text-stone-800 text-lg">{item.name}</h3>
-                    <p className="text-sm text-stone-500 mb-1">{item.size}</p>
-                    <span className="font-semibold text-amber-900">
+                    <p className="text-sm font-medium text-stone-600 mt-0.5">
+                      {item.sizeName}
+                    </p>
+                    {item.toppings && item.toppings.length > 0 && (
+                      <p className="text-xs text-amber-900/80 mt-1">
+                        <span className="font-semibold">Topping:</span>{' '}
+                        {item.toppings.map((t) => t.name).join(', ')}
+                      </p>
+                    )}
+                    <span className="font-semibold text-amber-900 inline-block mt-1">
                       {item.price.toLocaleString('vi-VN')} đ
                     </span>
                   </div>
 
+                  {/* Tăng / giảm số lượng */}
                   <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden bg-stone-50">
                     <button
-                      onClick={() => updateQuantity(item.id, -1)}
+                      type="button"
+                      onClick={() => updateQuantity(item.cartItemId, -1)}
                       className="px-3 py-1.5 text-stone-600 hover:bg-stone-200 transition font-bold"
                     >
                       -
@@ -126,19 +88,22 @@ export default function CartPage() {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => updateQuantity(item.id, 1)}
+                      type="button"
+                      onClick={() => updateQuantity(item.cartItemId, 1)}
                       className="px-3 py-1.5 text-stone-600 hover:bg-stone-200 transition font-bold"
                     >
                       +
                     </button>
                   </div>
 
+                  {/* Thành tiền và nút Xóa */}
                   <div className="text-right flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
                     <p className="font-bold text-stone-900">
                       {(item.price * item.quantity).toLocaleString('vi-VN')} đ
                     </p>
                     <button
-                      onClick={() => removeItem(item.id)}
+                      type="button"
+                      onClick={() => removeFromCart(item.cartItemId)}
                       className="text-stone-400 hover:text-red-500 transition p-1"
                       title="Xóa món này"
                     >
@@ -156,6 +121,7 @@ export default function CartPage() {
               ))}
             </div>
 
+            {/* Cột tóm tắt đơn hàng */}
             <div className="lg:col-span-1">
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-stone-200 sticky top-6">
                 <h2 className="text-xl font-bold text-stone-900 mb-6">Tóm tắt đơn hàng</h2>
@@ -178,12 +144,12 @@ export default function CartPage() {
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-base font-bold text-stone-900">Tổng cộng</span>
                   <span className="text-2xl font-black text-amber-900">
-                    {total.toLocaleString('vi-VN')} đ
+                    {totalPrice.toLocaleString('vi-VN')} đ
                   </span>
                 </div>
 
                 <Link
-                  href="/checkout"
+                  href="/thanh-toan"
                   className="w-full block text-center py-3.5 px-4 bg-amber-900 hover:bg-amber-800 text-white font-semibold rounded-xl transition duration-200 shadow-md hover:shadow-lg"
                 >
                   Tiến hành thanh toán
@@ -191,7 +157,7 @@ export default function CartPage() {
 
                 <div className="mt-4 text-center">
                   <Link
-                    href="/"
+                    href="/thuc-don"
                     className="text-sm font-medium text-stone-500 hover:text-amber-900 transition"
                   >
                     ← Tiếp tục chọn món

@@ -4,7 +4,7 @@ import "./globals.css";
  
 import Header from "../components/Header"; 
 import Footer from "../components/Footer";
- 
+import { CartProvider } from "../context/CartContext";
 
 
 
@@ -31,15 +31,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {/* Đặt Header ở đây để nó luôn nằm trên cùng */}
-        <Header />
-        
-        {/* Phần main sẽ chứa nội dung của từng page */}
-        <main className="flex-grow">
-          {children}
-         
-        </main>
-        <Footer/>
+        <CartProvider>
+          {/* Đặt Header ở đây để nó luôn nằm trên cùng */}
+          <Header />
+          
+          {/* Phần main sẽ chứa nội dung của từng page */}
+          <main className="flex-grow">
+            {children}
+          </main>
+          <Footer/>
+        </CartProvider>
       </body>
     </html>
   );
