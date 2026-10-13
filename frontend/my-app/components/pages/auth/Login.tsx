@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export default function Login() {
   return (
@@ -75,9 +76,9 @@ export default function Login() {
                 <input type="checkbox" className="w-4 h-4 rounded border-[#E5D9CD] text-[#6F4E37] focus:ring-[#6F4E37]" />
                 <span className="text-[#2B2118] text-sm font-['Inter']">Ghi nhớ đăng nhập</span>
               </label>
-              <a href="forgotpassword" className="text-[#6F4E37] text-sm font-bold font-['Inter'] hover:underline">
+              <Link href="/forgotpassword" className="text-[#6F4E37] text-sm font-bold font-['Inter'] hover:underline">
                 Quên mật khẩu?
-              </a>
+              </Link>
             </div>
 
             {/* Nút Đăng nhập */}
@@ -105,7 +106,7 @@ export default function Login() {
 
             {/* Đăng ký */}
             <p className="text-center text-[#74665B] text-sm font-['Inter'] mt-4">
-              Chưa có tài khoản? <a href="/register" className="text-[#6F4E37] font-bold hover:underline">Đăng ký ngay</a>
+              Chưa có tài khoản? <Link href="/register" className="text-[#6F4E37] font-bold hover:underline">Đăng ký ngay</Link>
             </p>
             
             <p className="text-center text-[#74665B] text-[11px] font-['Inter'] mt-2">

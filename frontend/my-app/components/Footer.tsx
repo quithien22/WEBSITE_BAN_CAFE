@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import React from 'react';
 
 export default function Footer() {
@@ -9,9 +10,9 @@ export default function Footer() {
         
         {/* Phần Logo BrewLite */}
         <div>
-          <a href="/" className="text-[#F5EBDD] text-[28px] font-bold font-['Inter'] tracking-tighter">
+          <Link href="/" className="text-[#F5EBDD] text-[28px] font-bold font-['Inter'] tracking-tighter">
             BrewLite
-          </a>
+          </Link>
         </div>
 
         {/* Phần Nội dung chính (chia 3 cột) */}
@@ -24,20 +25,19 @@ export default function Footer() {
             <p>Hotline: 1900 1042 · hello@brewlite.vn</p>
           </div>
 
-          {/* Cột 2: Khám phá */}
+          {/* Cột 2: Khám phá (chỉ giữ các trang đã có) */}
           <div className="flex flex-col">
             <h3 className="font-bold text-[16px]">Khám phá BrewLite</h3>
-            <a href="/menu" className="hover:text-white transition-colors">Thực đơn · Khuyến mãi · Về chúng tôi</a>
-            <a href="/contact" className="hover:text-white transition-colors">Liên hệ · Lịch sử đơn hàng</a>
-            <a href="#" className="hover:text-white transition-colors">Facebook · Instagram · YouTube</a>
+            <Link href="/thuc-don" className="hover:text-white transition-colors">Thực đơn</Link>
+            <Link href="/gio-hang" className="hover:text-white transition-colors">Giỏ hàng</Link>
+            <Link href="/chi-tiet-don-hang" className="hover:text-white transition-colors">Lịch sử đơn hàng</Link>
           </div>
 
-          {/* Cột 3: Hỗ trợ khách hàng */}
+          {/* Cột 3: Hỗ trợ khách hàng (chưa có trang nên để dạng chữ, không gắn link) */}
           <div className="flex flex-col">
             <h3 className="font-bold text-[16px]">Luôn bên bạn</h3>
-            <a href="#" className="hover:text-white transition-colors">Hướng dẫn đặt hàng · Câu hỏi thường gặp</a>
-            <a href="#" className="hover:text-white transition-colors">Điều khoản sử dụng · Chính sách bảo mật</a>
-            <a href="#" className="hover:text-white transition-colors">Thanh toán an toàn, không tiền mặt</a>
+            <p>Thanh toán an toàn, không tiền mặt</p>
+            <p>Hỗ trợ: 1900 1042</p>
           </div>
 
         </div>

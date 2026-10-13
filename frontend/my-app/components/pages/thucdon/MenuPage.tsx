@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCart } from '../../../context/CartContext';
+import { useCart } from '../context/CartContext';
 
 // Định nghĩa kiểu dữ liệu
 interface SizeOption {
@@ -28,7 +28,7 @@ interface MenuItem {
 }
 
 // Danh mục và món ăn
-const CATEGORIES = ['Tất cả', 'Cà phê truyền thống', 'Cà phê pha máy', 'Bánh ngọt'];
+const CATEGORIES = ['Tất cả', 'Cà phê truyền thống', 'Cà phê pha máy'];
 
 const MENU_ITEMS: MenuItem[] = [
     {
@@ -76,7 +76,7 @@ const MENU_ITEMS: MenuItem[] = [
         category: 'Cà phê truyền thống',
         price: 29000,
         desc: 'Thức uống quốc dân với vị đắng đậm đặc trưng của hạt Robusta rang mộc, quyện cùng sữa đặc béo ngọt và đá mát lạnh giúp đánh thức năng lượng tức thì.',
-        image: 'https://f5cafe.com/wp-content/uploads/2020/06/ca_phe_sua_da.jpg',
+        image: '/images/menu/ca-phe-sua-da.jpg',
         sizes: [
             { id: 'S', name: 'Size S (Nhỏ)', extraPrice: 0 },
             { id: 'M', name: 'Size M (Vừa)', extraPrice: 6000 },
@@ -193,7 +193,7 @@ export default function MenuPage() {
                 </div>
 
                 {/* Thanh chọn danh mục (Tabs) */}
-                <div className="flex wrap justify-center gap-2 mb-10">
+                <div className="flex flex-wrap justify-center gap-2 mb-10">
                     {CATEGORIES.map((cat) => (
                         <button
                             key={cat}

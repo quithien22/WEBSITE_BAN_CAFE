@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export default function Register() {
   return (
@@ -133,7 +134,7 @@ export default function Register() {
 
             {/* Link Đăng nhập */}
             <p className="text-center text-[#74665B] text-sm font-['Inter'] mt-2">
-              Đã có tài khoản? <a href="/login" className="text-[#6F4E37] font-bold hover:underline">Đăng nhập</a>
+              Đã có tài khoản? <Link href="/login" className="text-[#6F4E37] font-bold hover:underline">Đăng nhập</Link>
             </p>
 
           </form>

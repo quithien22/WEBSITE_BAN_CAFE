@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 export default function OrderSuccessPage() {
   return (
@@ -32,7 +33,7 @@ export default function OrderSuccessPage() {
               Đặt hàng thành công!
             </h1>
             <p className="text-[#6B5E53] text-sm">
-              Cảm ơn Minh Anh. Chúng minh đã nhận đơn và sẽ chuẩn bị thật ngon.
+              Cảm ơn Minh Anh. Chúng mình đã nhận đơn và sẽ chuẩn bị thật ngon.
             </p>
             <div className="mt-2">
               <h2 className="text-xl font-bold text-[#2B2118]">
@@ -58,7 +59,7 @@ export default function OrderSuccessPage() {
                 <div className="flex items-start justify-between pb-6 border-b border-[#F5F2EC]">
                   <div className="flex gap-4">
                     <img
-                      src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&q=80&w=120"
+                      src="/images/menu/ca-phe-sua-da.jpg"
                       alt="Cà phê sữa đá"
                       className="w-16 h-16 rounded-xl object-cover"
                     />
@@ -80,7 +81,7 @@ export default function OrderSuccessPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex gap-4">
                     <img
-                      src="https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&q=80&w=120"
+                      src="/images/menu/tra-dao-cam-sa.jpg"
                       alt="Trà đào cam sả"
                       className="w-16 h-16 rounded-xl object-cover"
                     />
@@ -89,7 +90,7 @@ export default function OrderSuccessPage() {
                         Trà đào cam sả
                       </h4>
                       <p className="text-xs text-[#8C7A6B] mt-0.5">
-                        Cỡ S · 100% đường · Đã bình thường
+                        Cỡ S · 100% đường · Đá bình thường
                       </p>
                       <p className="text-xs font-medium text-[#6B5E53] mt-2">
                         45.000đ × 1 = 45.000đ
@@ -206,12 +207,12 @@ export default function OrderSuccessPage() {
 
               {/* Các nút bấm hành động */}
               <div className="flex flex-col gap-3">
-                <button className="w-full bg-[#6F4E37] text-white py-3 rounded-xl font-semibold hover:bg-opacity-90 transition-all shadow-sm">
+                <Link href="/chi-tiet-don-hang" className="w-full block text-center bg-[#6F4E37] text-white py-3 rounded-xl font-semibold hover:bg-opacity-90 transition-all shadow-sm">
                   Theo dõi đơn
-                </button>
-                <button className="w-full bg-white border border-[#E0D6CC] text-[#2B2118] py-3 rounded-xl font-semibold hover:bg-[#FAF8F5] transition-all">
+                </Link>
+                <Link href="/" className="w-full block text-center bg-white border border-[#E0D6CC] text-[#2B2118] py-3 rounded-xl font-semibold hover:bg-[#FAF8F5] transition-all">
                   Về trang chủ
-                </button>
+                </Link>
               </div>
             </div>
           </div>

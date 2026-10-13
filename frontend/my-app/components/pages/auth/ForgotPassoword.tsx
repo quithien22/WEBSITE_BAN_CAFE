@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export default function ForgotPassword() {
   return (
@@ -52,9 +53,9 @@ export default function ForgotPassword() {
 
           {/* Quay lại đăng nhập */}
           <div className="w-full text-center mt-2">
-            <a href="/login" className="text-[#2B2118] text-sm font-bold font-['Inter'] hover:text-[#6F4E37] transition-colors">
+            <Link href="/login" className="text-[#2B2118] text-sm font-bold font-['Inter'] hover:text-[#6F4E37] transition-colors">
               Quay lại đăng nhập
-            </a>
+            </Link>
           </div>
 
         </form>
