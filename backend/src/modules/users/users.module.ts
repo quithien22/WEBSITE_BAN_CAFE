@@ -1,1 +1,4 @@
-// [Users] Module người dùng: export UsersService cho Auth và Loyalty dùng.
+import { Module } from "@nestjs/common";
+
+@Module({})
+export class UsersModule {}
