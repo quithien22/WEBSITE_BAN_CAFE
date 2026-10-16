@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../giohang/CartContext';
 
 // Định nghĩa kiểu dữ liệu
 interface SizeOption {

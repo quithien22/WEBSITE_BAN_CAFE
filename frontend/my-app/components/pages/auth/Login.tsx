@@ -1,18 +1,45 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
+  const router = useRouter();
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await login(email.trim(), password, remember);
+      router.push('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Đăng nhập thất bại');
+    } finally {
+      setLoading(false);
+    }
+  }
   return (
     <div className="w-full flex justify-center py-10 font-sans">
-      
+
       {/* Container chính - W: 1280px */}
       <div className="w-[1280px] flex gap-[10px] items-start">
-        
+
         {/* Cột trái: Hình ảnh */}
         <div className="w-1/2 flex flex-col gap-6">
-          <img 
-            src="https://images.unsplash.com/photo-1497935586351-b67a49e012bf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-            alt="Coffee shop" 
+          <img
+            src="https://images.unsplash.com/photo-1497935586351-b67a49e012bf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+            alt="Coffee shop"
             className="w-full h-[500px] object-cover rounded-2xl"
           />
           <div className="flex flex-col gap-2">
@@ -27,7 +54,7 @@ export default function Login() {
 
         {/* Cột phải: Form đăng nhập */}
         <div className="w-1/2 px-16 flex flex-col pt-8">
-          
+
           <h2 className="text-[32px] font-bold text-[#2B2118] font-['Inter'] mb-2">
             Rất vui gặp lại bạn
           </h2>
@@ -35,15 +62,14 @@ export default function Login() {
             Đăng nhập để tiếp tục với ly cà phê yêu thích.
           </p>
 
-          <form className="flex flex-col gap-5">
-            
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+
             {/* Input Email */}
             <div className="flex flex-col gap-2">
               <label className="text-[#2B2118] text-sm font-bold font-['Inter']">Email</label>
               <div className="relative">
-                <input 
-                  type="email" 
-                  placeholder="ban@email.com" 
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Nhập email của bạn"
                   className="w-full border border-[#E5D9CD] rounded-lg px-4 py-3 text-[#2B2118] placeholder-[#74665B] font-['Inter'] focus:outline-none focus:border-[#6F4E37]"
                 />
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute right-4 top-1/2 -translate-y-1/2 text-[#74665B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -56,12 +82,11 @@ export default function Login() {
             <div className="flex flex-col gap-2">
               <label className="text-[#2B2118] text-sm font-bold font-['Inter']">Mật khẩu</label>
               <div className="relative">
-                <input 
-                  type="password" 
-                  placeholder="Nhập mật khẩu " 
+                <input type={showPw ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu "
                   className="w-full border border-[#E5D9CD] rounded-lg px-4 py-3 text-[#2B2118] placeholder-[#2B2118] font-['Inter'] tracking-widest focus:outline-none focus:border-[#6F4E37]"
                 />
-                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#74665B] hover:text-[#6F4E37]">
+                <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#74665B] hover:text-[#6F4E37]">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -73,7 +98,7 @@ export default function Login() {
             {/* Ghi nhớ & Quên mật khẩu */}
             <div className="flex justify-between items-center mt-2">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-[#E5D9CD] text-[#6F4E37] focus:ring-[#6F4E37]" />
+                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="w-4 h-4 rounded border-[#E5D9CD] text-[#6F4E37] focus:ring-[#6F4E37]" />
                 <span className="text-[#2B2118] text-sm font-['Inter']">Ghi nhớ đăng nhập</span>
               </label>
               <Link href="/forgotpassword" className="text-[#6F4E37] text-sm font-bold font-['Inter'] hover:underline">
@@ -81,9 +106,12 @@ export default function Login() {
               </Link>
             </div>
 
+            {/* Hiển thị lỗi đăng nhập */}
+            {error && <p className="text-red-600 text-sm font-['Inter']">{error}</p>}
+
             {/* Nút Đăng nhập */}
-            <button className="w-full bg-[#6F4E37] text-white font-bold font-['Inter'] py-3.5 rounded-lg mt-4 hover:bg-opacity-90 transition-colors">
-              Đăng nhập
+            <button type="submit" disabled={loading} className="w-full bg-[#6F4E37] text-white font-bold font-['Inter'] py-3.5 rounded-lg mt-4 hover:bg-opacity-90 transition-colors">
+              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
 
             {/* Hoặc */}
@@ -108,7 +136,7 @@ export default function Login() {
             <p className="text-center text-[#74665B] text-sm font-['Inter'] mt-4">
               Chưa có tài khoản? <Link href="/register" className="text-[#6F4E37] font-bold hover:underline">Đăng ký ngay</Link>
             </p>
-            
+
             <p className="text-center text-[#74665B] text-[11px] font-['Inter'] mt-2">
               Thông tin của bạn được bảo mật và mã hóa.
             </p>

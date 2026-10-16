@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import React from 'react';
-import { useCart } from './pages/context/CartContext';
-
+import { useCart } from './pages/giohang/CartContext';
+import { useAuth } from './pages/context/AuthContext';
 export default function Header() {
   const { totalCartCount } = useCart();
-
+  const { user, isReady, logout } = useAuth();
   return (
     <div className="w-full bg-[#F5EBDD] flex justify-center font-sans">
       

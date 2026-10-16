@@ -1,5 +1,23 @@
-# Đã tạo
+## CHẠY BACKEND
+# 1 Database
+#MỞ
+docker compose up -d
+docker compose up -d db
+#TẮT
+docker compose down
 
+# 2 Backend
+cd backend
+cp .env.example .env
+npm install && npx prisma generate && npx prisma db push && npm run seed
+npm run start:dev       
+
+# 3 Frontend
+cd frontend
+npm run dev
+
+
+# Đã tạo
 ## Gốc
 - main.ts, app.module.ts
   → Frontend: không có file riêng. Chỉ cần frontend chạy ở địa chỉ khớp `FRONTEND_URL` (để backend cho phép CORS) và gọi API tới cổng 4000.

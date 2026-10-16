@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Clock, User, Smartphone, QrCode, CreditCard, Lock, Info } from 'lucide-react';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../giohang/CartContext';
 
 const formatMoney = (amount: number) => new Intl.NumberFormat('vi-VN').format(amount) + 'đ';
 

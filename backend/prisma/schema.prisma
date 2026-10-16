@@ -48,7 +48,8 @@ model User {
   role          Role     @default(CUSTOMER)
   loyaltyPoints Int      @default(0)
   createdAt     DateTime @default(now())
-
+  resetTokenHash      String?
+  resetTokenExpiresAt DateTime?
   orders Order[]
 }
 
