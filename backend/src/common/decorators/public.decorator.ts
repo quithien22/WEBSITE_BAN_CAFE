@@ -1,1 +1,4 @@
-// [Nền tảng] Decorator @Public(): đánh dấu endpoint không cần đăng nhập (xem thực đơn, đăng ký, đăng nhập).
+import { SetMetadata } from '@nestjs/common';
+
+export const IS_PUBLIC_KEY = 'isPublic';
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
