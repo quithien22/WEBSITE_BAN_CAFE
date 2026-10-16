@@ -22,7 +22,7 @@ export default function Header() {
         <nav className="flex gap-8 text-[#2B2118] font-semibold text-sm">
           <Link href="/" className="hover:text-[#6F4E37] transition-colors">Trang chủ</Link>
           <Link href="/thuc-don" className="hover:text-[#6F4E37] transition-colors">Thực đơn</Link>
-          <Link href="/chi-tiet-don-hang" className="hover:text-[#6F4E37] transition-colors">Đơn hàng</Link>
+          <Link href="/lich-su-don-hang" className="hover:text-[#6F4E37] transition-colors">Đơn hàng</Link>
         </nav>
 
         {/* Phần 3: Công cụ & Tài khoản */}

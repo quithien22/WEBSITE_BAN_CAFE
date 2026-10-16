@@ -1,3 +1,5 @@
+import HomePage from '@/components/pages/trangchu/HomePage';
+
 export default function Home() {
-  return <div className="p-10"></div>;
+  return <HomePage />;
 }
