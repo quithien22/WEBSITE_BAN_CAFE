@@ -1,47 +1,38 @@
-// src/modules/orders/orders.controller.ts
-import {
-  Controller,
-  Post,
-  Get,
-  Param,
-  Body,
-  UseGuards,
-  ParseIntPipe,
-} from "@nestjs/common";
-import { OrdersService } from "./orders.service";
-import { CreateOrderDto } from "./dto/create-order.dto";
-import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Req, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { OrdersService } from './orders.service';
+import { CreateOrderDto } from './dto/create-order.dto';
 
-@Controller("orders")
-@UseGuards(JwtAuthGuard)
+// JwtStrategy của BrewLite kiểm tra Bearer token và gán req.user.id.
+@Controller('orders')
+@UseGuards(AuthGuard('jwt'))
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private readonly orders: OrdersService) {}
 
   @Post()
-  async createOrder(@CurrentUser() user: any, @Body() dto: CreateOrderDto) {
-    // user.id từ JWT tương ứng với kiểu Int của model User trong Prisma[cite: 5]
-    return this.ordersService.createOrder(user.id, dto);
+  create(@Req() req: any, @Body() dto: CreateOrderDto) {
+    return this.orders.createOrder(req.user.id, dto);
   }
 
-  @Get(":id")
-  async getOrderDetail(@Param("id", ParseIntPipe) id: number) {
-    return this.ordersService.getOrderDetail(id);
+  @Get()
+  list(@Req() req: any) {
+    return this.orders.listMyOrders(req.user.id);
   }
 
-  // Endpoint nhận kết quả trả về khi thanh toán thành công hoặc thất bại từ cổng thanh toán
-  @Post(":id/payment-callback")
-  async paymentCallback(
-    @Param("id", ParseIntPipe) id: number,
-    @Body("status") status: "SUCCESS" | "FAILED",
-    @Body("transactionId") transactionId?: string,
-    @Body("failureReason") failureReason?: string,
-  ) {
-    return this.ordersService.handlePaymentCallback(
-      id,
-      status,
-      transactionId,
-      failureReason,
-    );
+  @Get(':id')
+  detail(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.orders.getOrderDetail(req.user.id, id);
+  }
+
+  @Post(':id/cancel')
+  cancel(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.orders.cancelOrder(req.user.id, id);
+  }
+
+  // Chỉ có trong môi trường DEVELOPMENT với ALLOW_DEMO_PAYMENTS=true.
+  // Không cung cấp endpoint giả mạo callback thanh toán công khai.
+  @Post(':id/demo-pay')
+  demoPay(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.orders.demoPay(req.user.id, id);
   }
 }
