@@ -130,10 +130,24 @@ const TOPPINGS = [
 ];
 
 async function main() {
-  // ---- Sản phẩm (bỏ qua nếu đã có cùng tên) ----
+  // ---- Sản phẩm (tạo mới hoặc cập nhật thông tin/ảnh nếu đã có) ----
   for (const p of PRODUCTS) {
     const existing = await prisma.product.findFirst({ where: { name: p.name } });
-    if (!existing) await prisma.product.create({ data: p });
+    if (!existing) {
+      await prisma.product.create({ data: p });
+    } else {
+      await prisma.product.update({
+        where: { id: existing.id },
+        data: {
+          description: p.description,
+          category: p.category,
+          price: p.price,
+          imageUrl: p.imageUrl,
+          stock: p.stock,
+          isFeatured: p.isFeatured,
+        },
+      });
+    }
   }
 
   // ---- Topping ----
