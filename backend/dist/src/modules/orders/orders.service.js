@@ -28,6 +28,9 @@ let OrdersService = class OrdersService {
             if (!product || !product.isActive) {
                 throw new common_1.BadRequestException(`Sản phẩm với ID ${item.productId} không tồn tại hoặc đã ngừng bán`);
             }
+            if (product.stock < item.qty) {
+                throw new common_1.BadRequestException(`Sản phẩm "${product.name}" không đủ số lượng tồn kho (chỉ còn lại ${product.stock} phần)`);
+            }
             const unitPrice = product.price;
             const lineTotal = unitPrice * item.qty;
             subtotal += lineTotal;
@@ -46,44 +49,56 @@ let OrdersService = class OrdersService {
         }
         let discount = 0;
         if (dto.couponCode === "CHAO10") {
-            discount = subtotal * 0.1;
+            discount = Math.round(subtotal * 0.1);
         }
         const pointsUsed = dto.pointsUsed || 0;
         const total = subtotal - discount - pointsUsed;
         const finalTotal = total > 0 ? total : 0;
         const idempotencyKey = crypto.randomUUID();
-        const order = await this.prisma.order.create({
-            data: {
-                userId,
-                subtotal,
-                discount,
-                pointsUsed,
-                total: finalTotal,
-                couponCode: dto.couponCode,
-                note: dto.note,
-                status: client_1.OrderStatus.PENDING,
-                items: {
-                    create: orderItemsData,
-                },
-                payments: {
-                    create: {
-                        idempotencyKey,
-                        amount: finalTotal,
-                        method: dto.paymentMethod,
-                        provider: dto.provider,
-                        status: client_1.PaymentStatus.PENDING,
+        const order = await this.prisma.$transaction(async (tx) => {
+            for (const item of dto.items) {
+                await tx.product.update({
+                    where: { id: item.productId },
+                    data: {
+                        stock: {
+                            decrement: item.qty,
+                        },
+                    },
+                });
+            }
+            return await tx.order.create({
+                data: {
+                    userId,
+                    subtotal,
+                    discount,
+                    pointsUsed,
+                    total: finalTotal,
+                    couponCode: dto.couponCode,
+                    note: dto.note,
+                    status: client_1.OrderStatus.PENDING,
+                    items: {
+                        create: orderItemsData,
+                    },
+                    payments: {
+                        create: {
+                            idempotencyKey,
+                            amount: finalTotal,
+                            method: dto.paymentMethod,
+                            provider: dto.provider,
+                            status: client_1.PaymentStatus.PENDING,
+                        },
+                    },
+                    statusLogs: {
+                        create: {
+                            status: client_1.OrderStatus.PENDING,
+                        },
                     },
                 },
-                statusLogs: {
-                    create: {
-                        status: client_1.OrderStatus.PENDING,
-                    },
+                include: {
+                    items: true,
+                    payments: true,
                 },
-            },
-            include: {
-                items: true,
-                payments: true,
-            },
+            });
         });
         return {
             message: "Tạo đơn hàng thành công",
@@ -111,7 +126,10 @@ let OrdersService = class OrdersService {
     async handlePaymentCallback(orderId, status, transactionId, failureReason) {
         const order = await this.prisma.order.findUnique({
             where: { id: orderId },
-            include: { payments: true },
+            include: {
+                payments: true,
+                items: true,
+            },
         });
         if (!order) {
             throw new common_1.NotFoundException("Không tìm thấy đơn hàng");
@@ -122,8 +140,20 @@ let OrdersService = class OrdersService {
         }
         const newOrderStatus = status === "SUCCESS" ? client_1.OrderStatus.PAID : client_1.OrderStatus.PAYMENT_FAILED;
         const newPaymentStatus = status === "SUCCESS" ? client_1.PaymentStatus.SUCCESS : client_1.PaymentStatus.FAILED;
-        return await this.prisma.$transaction(async (prisma) => {
-            await prisma.payment.update({
+        return await this.prisma.$transaction(async (tx) => {
+            if (status === "FAILED") {
+                for (const item of order.items) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: {
+                            stock: {
+                                increment: item.qty,
+                            },
+                        },
+                    });
+                }
+            }
+            await tx.payment.update({
                 where: { id: payment.id },
                 data: {
                     status: newPaymentStatus,
@@ -131,7 +161,7 @@ let OrdersService = class OrdersService {
                     failureReason,
                 },
             });
-            const updatedOrder = await prisma.order.update({
+            const updatedOrder = await tx.order.update({
                 where: { id: orderId },
                 data: {
                     status: newOrderStatus,

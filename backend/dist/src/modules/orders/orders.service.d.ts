@@ -11,8 +11,8 @@ export declare class OrdersService {
     }>;
     getOrderDetail(orderId: number): Promise<{
         user: {
-            id: number;
             name: string;
+            id: number;
             email: string;
             phone: string;
         };
@@ -31,9 +31,9 @@ export declare class OrdersService {
             orderId: number;
         }[];
         payments: {
+            id: number;
             status: import(".prisma/client").$Enums.PaymentStatus;
             createdAt: Date;
-            id: number;
             orderId: number;
             idempotencyKey: string;
             amount: number;
@@ -43,6 +43,8 @@ export declare class OrdersService {
             failureReason: string | null;
         }[];
     } & {
+        id: number;
+        userId: number;
         status: import(".prisma/client").$Enums.OrderStatus;
         subtotal: number;
         discount: number;
@@ -55,8 +57,6 @@ export declare class OrdersService {
         version: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
-        userId: number;
     }>;
     handlePaymentCallback(orderId: number, status: "SUCCESS" | "FAILED", transactionId?: string, failureReason?: string): Promise<{
         items: {
@@ -74,9 +74,9 @@ export declare class OrdersService {
             orderId: number;
         }[];
         payments: {
+            id: number;
             status: import(".prisma/client").$Enums.PaymentStatus;
             createdAt: Date;
-            id: number;
             orderId: number;
             idempotencyKey: string;
             amount: number;
@@ -86,6 +86,8 @@ export declare class OrdersService {
             failureReason: string | null;
         }[];
     } & {
+        id: number;
+        userId: number;
         status: import(".prisma/client").$Enums.OrderStatus;
         subtotal: number;
         discount: number;
@@ -98,7 +100,5 @@ export declare class OrdersService {
         version: number;
         createdAt: Date;
         updatedAt: Date;
-        id: number;
-        userId: number;
     }>;
 }
