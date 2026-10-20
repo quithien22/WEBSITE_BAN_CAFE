@@ -1,0 +1,228 @@
+@startuml class-domain
+' BrewLite - Task 2.3: Class diagram mức domain - v1.1
+' Các lớp bắt buộc: User, Product, Order, OrderItem, Payment, Promotion, LoyaltyTransaction
+' Lớp bổ sung: Topping, OrderStatusLog, ToppingSnapshot (value object)
+' Nguyên tắc: bản thiết kế là chuẩn; schema.prisma và frontend được sửa theo sơ đồ này
+' Nguồn: srs.md (mục 1.4 và 5), usecase-spec-checkout.md, sprint1/03-mvp-design.md (mục 3),
+'        architecture/adr/010-identifier-strategy.md
+' Phiên bản 1.1:
+'  - Product.id và Topping.id là UUID (id catalog xuất hiện trên URL); các lớp còn lại giữ int
+'  - Thêm Role.MANAGER (UC-07, FR-29); Product.imageUrl có thể null; thêm ràng buộc {>= 0}
+'  - Thêm OrderItem.productId và lớp ToppingSnapshot
+' Kết xuất: plantuml -tsvg class-domain.puml
+title BrewLite – Class diagram (domain)
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam classAttributeIconSize 0
+skinparam ClassBackgroundColor #FFFFFF
+skinparam ClassBorderColor #2F7D4F
+skinparam ArrowColor #333333
+skinparam NoteBackgroundColor #FFF8E1
+skinparam NoteBorderColor #8D6E63
+hide empty methods
+
+' ===================== ENUM =====================
+enum Role <<enumeration>> {
+  CUSTOMER
+  STAFF
+  MANAGER
+}
+
+enum OrderStatus <<enumeration>> {
+  PENDING
+  PAID
+  PREPARING
+  READY
+  COMPLETED
+  PAYMENT_FAILED
+  CANCELLED
+}
+
+enum PaymentMethod <<enumeration>> {
+  WALLET
+  CARD
+}
+
+enum PaymentStatus <<enumeration>> {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum DiscountType <<enumeration>> {
+  PERCENT
+  FIXED
+}
+
+enum LoyaltyTxType <<enumeration>> {
+  EARN
+  REDEEM
+  REFUND
+  REVOKE
+}
+
+' ===================== CLASS =====================
+class User {
+  +id : int
+  +name : String
+  +email : String {unique}
+  +phone : String [0..1]
+  -passwordHash : String
+  +role : Role
+  +loyaltyPoints : int {>= 0}
+  +createdAt : DateTime
+}
+
+class Product {
+  +id : UUID
+  +name : String {unique}
+  +description : String
+  +category : String
+  +price : int {>= 0}  «giá cơ bản, size S, VND»
+  +imageUrl : String [0..1]
+  +stock : int {>= 0}
+  +version : int  «optimistic locking»
+  +isActive : boolean
+  +isFeatured : boolean
+  +createdAt : DateTime
+  +updatedAt : DateTime
+}
+
+class Topping {
+  +id : UUID
+  +name : String {unique}
+  +price : int {>= 0}
+  +isActive : boolean
+}
+
+class ToppingSnapshot <<value object>> {
+  +toppingId : UUID
+  +name : String
+  +price : int
+}
+
+class Order {
+  +id : int  «mã đơn hiển thị cho khách»
+  +status : OrderStatus
+  +subtotal : int
+  +discount : int
+  +pointsUsed : int
+  +total : int {>= 0}
+  +couponCode : String [0..1]
+  +note : String [0..1]
+  +pointsEarned : int
+  +pointsAwarded : boolean
+  +version : int  «optimistic locking»
+  +createdAt : DateTime
+  +updatedAt : DateTime
+}
+
+class OrderItem {
+  +id : int
+  +productId : UUID
+  +productName : String
+  +imageUrl : String [0..1]
+  +size : String  «S | M | L»
+  +sugar : int  «0 | 30 | 50 | 70 | 100»
+  +ice : String  «NONE | LESS | NORMAL»
+  +unitPrice : int
+  +qty : int  «1..20»
+  +lineTotal : int
+}
+
+class Payment {
+  +id : int
+  +idempotencyKey : String {unique}
+  +amount : int
+  +method : PaymentMethod
+  +provider : String  «MoMo | VNPay»
+  +status : PaymentStatus
+  +transactionId : String [0..1]
+  +failureReason : String [0..1]
+  +createdAt : DateTime
+}
+
+class Promotion {
+  +id : int
+  +code : String {unique}
+  +title : String
+  +description : String
+  +type : DiscountType
+  +value : int  «PERCENT: 1–100; FIXED: VND»
+  +minOrder : int
+  +maxDiscount : int [0..1]
+  +startsAt : DateTime
+  +endsAt : DateTime
+  +usageLimit : int [0..1]
+  +usedCount : int
+  +isActive : boolean
+}
+
+class LoyaltyTransaction {
+  +id : int
+  +type : LoyaltyTxType
+  +points : int  «EARN, REFUND: dương; REDEEM, REVOKE: âm»
+  +createdAt : DateTime
+}
+
+class OrderStatusLog {
+  +id : int
+  +status : OrderStatus
+  +createdAt : DateTime
+}
+
+' ===================== QUAN HỆ =====================
+User "1" -- "0..*" Order : đặt >
+Order "1" *-- "1..*" OrderItem : gồm >
+OrderItem "0..*" --> "1" Product : tham chiếu >
+OrderItem "1" *-- "0..10" ToppingSnapshot : chụp lại topping đã chọn
+ToppingSnapshot ..> Topping : từ
+Order "1" -- "0..*" Payment : được thanh toán bởi >
+Order "1" *-- "1..*" OrderStatusLog : ghi nhật ký >
+Order "0..*" --> "0..1" Promotion : áp dụng >
+User "1" -- "0..*" LoyaltyTransaction : có >
+LoyaltyTransaction "0..*" --> "0..1" Order : phát sinh từ
+
+' ===================== PHỤ THUỘC ENUM =====================
+User ..> Role
+Order ..> OrderStatus
+OrderStatusLog ..> OrderStatus
+Payment ..> PaymentMethod
+Payment ..> PaymentStatus
+Promotion ..> DiscountType
+LoyaltyTransaction ..> LoyaltyTxType
+
+' ===================== GHI CHÚ =====================
+note right of Order
+  Quy tắc tính tiền (SRS mục 5):
+  total = subtotal − discount − pointsUsed × 500
+  pointsEarned = ⌊total / 10.000⌋ (cộng một lần khi PAID)
+  Vòng đời: PENDING → PAID → PREPARING → READY → COMPLETED
+  PENDING → PAYMENT_FAILED → PENDING | CANCELLED
+  PENDING, PAYMENT_FAILED, PAID → CANCELLED
+end note
+
+note bottom of LoyaltyTransaction
+  Sổ cái điểm thưởng: REDEEM khi đặt đơn có dùng điểm,
+  EARN khi đơn PAID, REFUND và REVOKE khi hủy đơn.
+  User.loyaltyPoints là số dư (bằng tổng các giao dịch).
+end note
+
+note bottom of Payment
+  Mỗi Idempotency-Key ↔ đúng một Payment.
+  Payment PENDING quá 2 phút không còn chặn đơn.
+end note
+
+note left of Product
+  Ràng buộc database: price >= 0, stock >= 0 (CHECK).
+  Id catalog là UUID (ADR-010).
+end note
+
+note left of User
+  MANAGER kế thừa quyền của STAFF (UC-07).
+  Id người dùng giữ int (ADR-010).
+end note
+
+@enduml

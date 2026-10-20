@@ -1,0 +1,78 @@
+@startuml c4-context
+' BrewLite - Task 3.1: C4 mức 1 - System Context
+' Nguồn: docs/architecture/architecture-overview.md (mục 2)
+' Kết xuất: plantuml -tsvg architecture-c4.puml  (tạo c4-context.svg và c4-container.svg)
+title BrewLite – C4 mức 1: System Context
+
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam rectangle {
+  RoundCorner 12
+}
+
+actor "Khách hàng\n[Người dùng]\nĐặt đồ uống, thanh toán,\ntheo dõi đơn (điện thoại)" as KH
+actor "Nhân viên quầy\n[Người dùng]\nNhận đơn, pha chế,\ncập nhật trạng thái" as NV
+actor "Quản lý\n[Người dùng]\nQuản trị cửa hàng\n(kế thừa Nhân viên)" as QL
+
+rectangle "**BrewLite**\n[Hệ thống phần mềm]\nXem menu, giỏ hàng, đặt đơn,\nthanh toán không dùng tiền mặt,\ntheo dõi và xử lý đơn" as SYS #E3F2E7
+
+rectangle "**Cổng thanh toán**\n[Hệ thống ngoài – MÔ PHỎNG]\nMoMo (Ví) / VNPay (Thẻ)" as PAY #F2F2F2
+
+QL --|> NV
+
+KH --> SYS : Xem menu, đặt đơn, thanh toán,\ntheo dõi đơn\n[HTTPS]
+NV --> SYS : Xem đơn cần pha,\ncập nhật trạng thái\n[HTTPS]
+QL --> SYS : Quản trị sản phẩm, khuyến mãi\n(phạm vi mở rộng) [HTTPS]
+SYS --> PAY : Yêu cầu thanh toán\n(PaymentGateway)
+
+note bottom of PAY
+  Chỉ mô phỏng (OS-1). Hiện thực chạy trong tiến trình API,
+  thay thế được bằng cổng thật nhờ giao diện PaymentGateway (ADR-005).
+end note
+
+@enduml
+
+@startuml c4-container
+' BrewLite - Task 3.1: C4 mức 2 - Container
+' Nguồn: docs/architecture/architecture-overview.md (mục 3)
+title BrewLite – C4 mức 2: Container
+
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam rectangle {
+  RoundCorner 12
+}
+
+actor "Khách hàng / Nhân viên / Quản lý\n[Người dùng, trình duyệt hoặc PWA]" as USER
+
+rectangle "Hệ thống BrewLite" {
+  rectangle "**Web App**\n[Container: Next.js (App Router),\nTypeScript, Tailwind CSS, Zustand]\nGiao diện mobile-first/PWA, giỏ hàng,\ngọi API từ trình duyệt\nCổng 3000 | apps/web" as WEB #E3F2FD
+
+  rectangle "**API**\n[Container: NestJS, TypeScript, Prisma]\nNghiệp vụ, xác thực JWT, validate,\ntransaction, thanh toán mô phỏng\nCổng 4000 | apps/api" as API #E8F5E9
+
+  rectangle "**PaymentGateway (mô phỏng)**\n[Component trong API]\nMoMo / VNPay giả lập\napps/api/src/payments/gateway" as GW #F2F2F2
+
+  database "**PostgreSQL**\n[Container: PostgreSQL, lưu trữ bền]\nDữ liệu + migration\nCổng 5432 | apps/api/prisma" as DB #FFF3E0
+}
+
+USER --> WEB : Mở ứng dụng\n[HTTPS]
+USER --> API : Gọi API từ trình duyệt\n[HTTPS, JSON, Bearer JWT, CORS]
+WEB ..> API : Địa chỉ API\n(NEXT_PUBLIC_API_URL)
+API --> DB : Đọc/ghi dữ liệu\n[Prisma, TCP 5432, mạng nội bộ]
+API --> GW : charge(...)\n[gọi hàm trong tiến trình]
+
+note bottom of DB
+  Không public ra Internet.
+  Chỉ API kết nối qua mạng nội bộ.
+end note
+
+note bottom of WEB
+  Không chứa logic quyết định (giá, tồn kho, quyền).
+  Mọi quyết định nằm ở API.
+end note
+
+@enduml

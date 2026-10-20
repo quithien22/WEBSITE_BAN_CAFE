@@ -1,0 +1,100 @@
+@startuml usecase-checkout
+' BrewLite - Use-case trọng tâm: UC-01 Đặt và thanh toán đơn hàng (Task 1.3) - v1.1
+' Nguồn: BrewLite_UseCase_Con-UC-4 · Đặt hàng & thanh toán (draw.io), giữ nguyên mã đánh số của draw.io
+' Thay đổi so với bản draw.io:
+'  - Gộp 4.1 Đặt hàng + 4.2 Thanh toán dưới một use-case gốc UC-01 (khớp SRS)
+'  - Thêm actor phụ "Cổng thanh toán (mô phỏng)" nối với 4.2 Thanh toán
+'  - Thêm 4.2.5.2 Hủy đơn (extend 4.2.5) cho luồng A8 trong đặc tả
+'  - Ghi chú: Cộng điểm chỉ khi thanh toán thành công; 4.2.4 hiển thị cả màn thành công và thất bại
+' Kết xuất: plantuml -tsvg usecase-checkout.puml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam usecase {
+  BackgroundColor #E3F2E7
+  BorderColor #2F7D4F
+  ArrowColor #333333
+}
+
+actor "Khách hàng" as KH
+actor "Cổng thanh toán\n(MoMo / VNPay mô phỏng)" as PAY <<system>>
+
+rectangle "Hệ thống BrewLite — UC-01 · Đặt và thanh toán đơn hàng" {
+
+  usecase "**UC-01**\nĐặt và thanh toán\nđơn hàng" as UC01 #E3F2E7;line:2F7D4F;line.bold
+
+  ' ===== 4.1 Đặt hàng =====
+  usecase "**4.1** Đặt hàng" as UC41
+  usecase "1.2 Đăng nhập" as UC12
+  usecase "**4.1.2** Kiểm tra tồn kho" as UC412
+  usecase "**4.1.3** Tạo đơn trạng thái\nPENDING" as UC413
+  usecase "3.1.7 Áp mã khuyến mãi" as UC317
+  usecase "3.1.8 Dùng điểm thưởng" as UC318
+
+  ' ===== 4.2 Thanh toán =====
+  usecase "**4.2** Thanh toán" as UC42
+  usecase "**4.2.1** Chọn phương thức\n(Ví / Thẻ)" as UC421
+  usecase "**4.2.2** Chống thanh toán trùng\n(Idempotency-Key)" as UC422
+  usecase "**4.2.3** Cộng điểm thưởng" as UC423
+  usecase "**4.2.4** Xem xác nhận đơn" as UC424
+  usecase "**4.2.5** Xử lý thanh toán thất bại" as UC425
+  usecase "**4.2.5.1** Thử lại / đổi\nphương thức" as UC4251
+  usecase "**4.2.5.2** Hủy đơn" as UC4252
+}
+
+KH --> UC01
+
+' ---------- UC-01 gồm hai phần ----------
+UC01 .> UC41 : <<include>>
+UC01 .> UC42 : <<include>>
+
+' ---------- 4.1 Đặt hàng ----------
+UC41 .> UC12 : <<include>>
+UC41 .> UC412 : <<include>>
+UC41 .> UC413 : <<include>>
+UC317 .> UC41 : <<extend>>
+UC318 .> UC41 : <<extend>>
+
+' ---------- 4.2 Thanh toán ----------
+UC42 .> UC421 : <<include>>
+UC42 .> UC422 : <<include>>
+UC42 .> UC423 : <<include>>
+UC42 .> UC424 : <<include>>
+UC425 .> UC42 : <<extend>>
+UC4251 .> UC425 : <<extend>>
+UC4252 .> UC425 : <<extend>>
+
+UC42 -- PAY
+
+note bottom of UC412
+  Giữ hàng bằng khóa lạc quan (version).
+  Hết hàng => 409, không tạo đơn.
+end note
+
+note bottom of UC422
+  Cùng key gửi lại => trả kết quả cũ,
+  không gọi cổng thanh toán lần hai.
+end note
+
+note bottom of UC423
+  Chỉ thực hiện khi thanh toán thành công,
+  cộng đúng một lần cho mỗi đơn.
+end note
+
+note bottom of UC424
+  Thành công: /orders/{id}/success
+  Thất bại: /orders/{id}/failed
+end note
+
+note right of UC425
+  Thất bại: đơn PAYMENT_FAILED,
+  giỏ hàng được giữ nguyên.
+end note
+
+note right of UC4252
+  Luồng A8: hoàn kho, hoàn lượt mã,
+  hoàn điểm đã dùng.
+end note
+
+@enduml

@@ -1,0 +1,309 @@
+@startuml activity-checkout
+' BrewLite - Task 2.1: Activity diagram luồng end-to-end
+' Xem menu -> Chọn tùy chọn -> Giỏ hàng -> Đặt đơn -> Thanh toán -> Theo dõi đơn
+' Nguồn đối chiếu: docs/requirements/srs.md, usecase-spec-checkout.md (UC-01), class-domain.puml
+' Phiên bản 1.1: thêm tìm kiếm/lọc menu (FR-07); ghi sổ điểm LoyaltyTransaction (REDEEM, EARN)
+' Kết xuất: plantuml -tsvg activity-checkout.puml
+title BrewLite – Activity diagram: luồng end-to-end (swimlane)
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityBorderColor #2F7D4F
+skinparam ActivityDiamondBackgroundColor #FFF8E1
+skinparam ActivityDiamondBorderColor #8D6E63
+skinparam NoteBackgroundColor #FFF8E1
+skinparam NoteBorderColor #8D6E63
+skinparam swimlaneTitleFontStyle bold
+
+|#E8F5E9|Khách hàng|
+|#E3F2FD|Next.js UI|
+|#FFF3E0|NestJS API và PostgreSQL|
+|#FCE4EC|Cổng thanh toán|
+|#F3E5F5|Nhân viên quầy|
+
+' =====================================================================
+' A. XEM MENU VÀ CHỌN TÙY CHỌN  (FR-06..FR-09)
+' =====================================================================
+|Khách hàng|
+start
+:Mở ứng dụng, vào trang thực đơn;
+|Next.js UI|
+:Hiển thị trạng thái **đang tải**;
+:Gọi GET /products\n(không cần JWT);
+|NestJS API và PostgreSQL|
+:Truy vấn sản phẩm đang bán\n(isActive = true);
+|Next.js UI|
+if (Gọi API lỗi?) then (có)
+  :Hiển thị trạng thái **lỗi**\nvà nút "Thử lại";
+  stop
+elseif (Danh sách rỗng?) then (có)
+  :Hiển thị trạng thái **rỗng**;
+  stop
+else (không)
+  :Hiển thị menu (mobile-first);
+endif
+
+|Khách hàng|
+if (Tìm kiếm hoặc lọc danh mục?) then (có)
+  :Nhập từ khóa hoặc chọn danh mục;
+  |Next.js UI|
+  :Gọi lại GET /products?search=&category=\n(sau 300 ms ngừng gõ);
+  if (Có kết quả?) then (không)
+    :Hiển thị "Không tìm thấy"\nvà nút "Xóa bộ lọc";
+  else (có)
+    :Cập nhật danh sách sản phẩm;
+  endif
+endif
+
+|Khách hàng|
+:Chọn một đồ uống;
+|Next.js UI|
+:Gọi GET /products/:id;
+|NestJS API và PostgreSQL|
+if (Sản phẩm tồn tại và đang bán?) then (không)
+  :Trả HTTP 404;
+  |Next.js UI|
+  :Hiển thị lỗi "không tìm thấy sản phẩm";
+  stop
+endif
+:Trả chi tiết sản phẩm kèm options\n(size, topping, mức đường, mức đá);
+|Next.js UI|
+:Hiển thị chi tiết sản phẩm;
+|Khách hàng|
+:Chọn size, topping, mức đường,\nmức đá và số lượng;
+|Next.js UI|
+:Tính đơn giá hiển thị\n(giá cơ bản + phụ phí size + topping);
+if (Sản phẩm hết hàng?) then (có)
+  :Hiển thị "Hết hàng",\nkhông cho thêm vào giỏ;
+  stop
+endif
+
+' =====================================================================
+' B. GIỎ HÀNG  (FR-11..FR-16)
+' =====================================================================
+:Thêm vào giỏ\n(gộp dòng trùng tùy chọn, tối đa 20 ly/dòng);
+:Lưu giỏ hàng vào trình duyệt;
+|Khách hàng|
+:Mở giỏ hàng, kiểm tra món,\nsửa số lượng hoặc xóa món;
+|Next.js UI|
+if (Giỏ hàng rỗng?) then (có)
+  :Hiển thị "Chưa có gì để thanh toán"\nkèm nút tới thực đơn;
+  stop
+endif
+:Tính tạm tính và tổng tiền;
+
+|Khách hàng|
+if (Có mã khuyến mãi?) then (có)
+  :Nhập mã khuyến mãi;
+  |Next.js UI|
+  :Gọi POST /promotions/validate;
+  |NestJS API và PostgreSQL|
+  :Kiểm tra mã: đang bật, còn hạn,\ncòn lượt dùng, đạt đơn tối thiểu;
+  |Next.js UI|
+  if (Mã hợp lệ?) then (có)
+    :Hiển thị số tiền giảm,\ncập nhật tổng tiền;
+  else (không)
+    :Hiển thị lý do\n(không hợp lệ / hết hạn / hết lượt / dưới mức tối thiểu);
+  endif
+endif
+
+|Khách hàng|
+if (Dùng điểm thưởng?) then (có)
+  :Nhập số điểm muốn dùng;
+  |Next.js UI|
+  :Giới hạn điểm ≤ điểm đang có\nvà ≤ giá trị đơn sau giảm giá;
+endif
+
+|Khách hàng|
+:Nhập ghi chú cho quầy (tùy chọn, ≤ 200 ký tự);
+:Bấm "Thanh toán";
+
+' =====================================================================
+' C. ĐĂNG NHẬP NẾU CHƯA CÓ PHIÊN  (FR-01, FR-02)
+' =====================================================================
+|Next.js UI|
+if (Đã đăng nhập (có JWT)?) then (chưa)
+  :Chuyển tới /login;
+  |Khách hàng|
+  :Nhập email, mật khẩu\n(hoặc đăng ký tài khoản mới);
+  |Next.js UI|
+  :Gọi POST /auth/login hoặc /auth/register;
+  |NestJS API và PostgreSQL|
+  if (Thông tin hợp lệ?) then (không)
+    :Trả HTTP 400 / 401 / 409;
+    |Next.js UI|
+    :Hiển thị lỗi tiếng Việt;
+    stop
+  endif
+  :Trả JWT và thông tin người dùng;
+  |Next.js UI|
+  :Lưu JWT, quay lại giỏ hàng\n(giỏ hàng vẫn còn);
+endif
+:Hiển thị trang /checkout\n(món, tổng tiền, Ví / Thẻ);
+|Khách hàng|
+:Chọn phương thức thanh toán\nVí (MoMo) hoặc Thẻ (VNPay);
+
+' =====================================================================
+' D. ĐẶT ĐƠN VÀ THANH TOÁN  (FR-17..FR-23)
+' =====================================================================
+repeat
+  |Khách hàng|
+  :Bấm "Xác nhận thanh toán";
+  |Next.js UI|
+  :Khóa nút, hiển thị "Đang xử lý thanh toán…";
+  if (Còn đơn dang dở của lần trước?) then (có)
+    :Gọi POST /orders/:id/cancel\n(hoàn kho, mã, điểm);
+  endif
+  :Gọi POST /orders\n(Bearer JWT, không gửi giá);
+
+  |NestJS API và PostgreSQL|
+  if (JWT hợp lệ?) then (không)
+    :Trả HTTP 401;
+    |Next.js UI|
+    :Chuyển tới /login, giữ giỏ hàng;
+    stop
+  endif
+  if (Dữ liệu đầu vào hợp lệ?) then (không)
+    :Trả HTTP 400\n(giỏ rỗng, size/đường/đá sai, số lượng ngoài 1..20,\nquá 30 dòng, ghi chú > 200 ký tự);
+    |Next.js UI|
+    :Hiển thị lỗi, giữ giỏ hàng, mở lại nút;
+    stop
+  endif
+  :BEGIN transaction;
+  :Đọc sản phẩm, topping từ database,\ntính lại giá (giá do máy chủ quyết định);
+  if (Sản phẩm, topping hợp lệ và đang bán?) then (không)
+    :ROLLBACK, trả HTTP 400;
+    |Next.js UI|
+    :Hiển thị lỗi, giữ giỏ hàng để khách sửa;
+    stop
+  endif
+  :Giữ tồn kho (khóa lạc quan theo version,\nthử lại tối đa 8 lần);
+  if (Đủ hàng?) then (không)
+    :ROLLBACK, trả HTTP 409\n("hết hàng" / "chỉ còn N phần" / "nhiều khách đặt cùng lúc");
+    |Next.js UI|
+    :Hiển thị lỗi, giữ giỏ hàng\n(khách giảm số lượng hoặc bỏ món);
+    stop
+  endif
+  :Nếu có mã: kiểm tra lại và tăng lượt dùng;
+  :Nếu dùng điểm: kiểm tra đủ điểm\nvà không vượt giá trị đơn, trừ điểm\nvà ghi sổ LoyaltyTransaction(REDEEM);
+  if (Mã và điểm hợp lệ?) then (không)
+    :ROLLBACK (hoàn cả tồn kho đã giữ),\ntrả HTTP 400;
+    |Next.js UI|
+    :Hiển thị lý do cụ thể, giữ giỏ hàng;
+    stop
+  endif
+  :Tạo đơn PENDING, các dòng đơn,\nnhật ký trạng thái; COMMIT;
+  :Trả HTTP 201 kèm đơn;
+
+  |Next.js UI|
+  :Lưu mã đơn đang chờ;\nsinh Idempotency-Key mới;
+  :Gọi POST /payments\n(Bearer JWT, Idempotency-Key, {orderId, method});
+  note right
+    E7 – mất mạng: hiển thị thông báo,
+    giữ giỏ hàng. Khách gửi lại cùng
+    Idempotency-Key sẽ nhận đúng kết quả cũ.
+  end note
+
+  |NestJS API và PostgreSQL|
+  if (JWT hợp lệ và\nIdempotency-Key dài 8–100 ký tự?) then (không)
+    :Trả HTTP 401 / 400;
+    |Next.js UI|
+    :Hiển thị lỗi, giữ giỏ hàng;
+    stop
+  endif
+
+  if (Key đã có trong bảng Payment?) then (có – client gửi lại)
+    if (Key thuộc đơn hoặc khách khác?) then (có)
+      :Trả HTTP 422;
+      |Next.js UI|
+      :Hiển thị lỗi;
+      stop
+    elseif (Giao dịch cũ còn PENDING?) then (có)
+      :Trả HTTP 409 "đang được xử lý";
+      |Next.js UI|
+      :Hiển thị "vui lòng đợi";
+      stop
+    else (đã xong)
+      :Trả đúng kết quả cũ (replayed = true)\nKHÔNG gọi cổng thanh toán, KHÔNG cộng điểm lần hai;
+    endif
+  else (chưa có – yêu cầu mới)
+    :BEGIN transaction (giữ chỗ Idempotency-Key);
+    if (Đơn tồn tại và thuộc về khách?) then (không)
+      :Trả HTTP 404;
+      |Next.js UI|
+      :Hiển thị lỗi;
+      stop
+    endif
+    if (Đơn ở PENDING / PAYMENT_FAILED\nvà không có giao dịch PENDING dưới 2 phút?) then (không)
+      :Trả HTTP 409\n("không ở trạng thái chờ thanh toán" /\n"đang được xử lý thanh toán");
+      |Next.js UI|
+      :Hiển thị lỗi;
+      stop
+    endif
+    :Khóa lạc quan trên đơn (version);\nPAYMENT_FAILED → PENDING nếu là lần thử lại;
+    :Tạo Payment PENDING (Idempotency-Key unique); COMMIT;
+
+    |Cổng thanh toán|
+    :Xử lý giao dịch (~0,4 giây)\nsố tiền = total của đơn lấy từ database;
+    if (Cổng chấp nhận?) then (có)
+      :Trả SUCCESS kèm transactionId;
+    else (từ chối hoặc không phản hồi)
+      :Trả FAILED kèm lý do;
+    endif
+
+    |NestJS API và PostgreSQL|
+    :BEGIN transaction (ghi kết quả);
+    if (Đơn còn ở PENDING?) then (không – đã bị hủy lúc chờ cổng)
+      :Ghi Payment REFUNDED (nếu cổng thành công)\nhoặc FAILED; đơn KHÔNG chuyển PAID;
+    else (còn)
+      :Cập nhật Payment SUCCESS / FAILED;
+      :Chuyển đơn PENDING → PAID hoặc PAYMENT_FAILED\nvà ghi nhật ký trạng thái;
+      if (Thanh toán thành công?) then (có)
+        :Cộng điểm thưởng đúng một lần\n(pointsAwarded: false → true)\nvà ghi sổ LoyaltyTransaction(EARN);
+      endif
+    endif
+    :COMMIT;
+  endif
+  :Trả { success, replayed, payment, order };
+
+  |Next.js UI|
+  if (success = true?) then (có)
+    :Xóa giỏ hàng, làm mới số điểm,\nchuyển tới /orders/{id}/success;
+    |Khách hàng|
+    :Xem xác nhận đơn\n(mã đơn, món, tổng tiền, phương thức, mã giao dịch);
+
+    ' ===== E. THEO DÕI ĐƠN VÀ XỬ LÝ TẠI QUẦY (FR-24..FR-28) =====
+    |Nhân viên quầy|
+    :Thấy đơn PAID cần pha chế;
+    :Gọi PATCH /orders/:id/status\n(PREPARING → READY → COMPLETED);
+    |NestJS API và PostgreSQL|
+    if (Vai trò STAFF và\nchuyển đúng thứ tự?) then (không)
+      :Trả HTTP 403 / 400 / 409;
+      |Nhân viên quầy|
+      :Xem lỗi, thao tác lại;
+      stop
+    endif
+    :Cập nhật trạng thái (khóa lạc quan)\nvà ghi nhật ký trạng thái;
+    |Next.js UI|
+    :Trang chi tiết đơn tự làm mới mỗi 8 giây,\nhiển thị trạng thái mới;
+    |Khách hàng|
+    :Nhận đồ uống tại quầy\n(đơn COMPLETED);
+    stop
+  else (không – thanh toán thất bại)
+    :Chuyển tới /orders/{id}/failed\n(đơn PAYMENT_FAILED, giỏ hàng được giữ);
+    |Khách hàng|
+    :Chọn hành động sau thất bại;
+  endif
+repeat while (Thử lại hoặc đổi phương thức?) is (thử lại\n(Idempotency-Key mới)) not (hủy đơn)
+
+|Next.js UI|
+:Gọi POST /orders/:id/cancel;
+|NestJS API và PostgreSQL|
+:Đơn → CANCELLED; hoàn tồn kho, lượt mã,\nđiểm đã dùng; ghi nhật ký trạng thái;
+|Next.js UI|
+:Hiển thị đơn đã hủy (giỏ hàng vẫn còn);
+stop
+
+@enduml

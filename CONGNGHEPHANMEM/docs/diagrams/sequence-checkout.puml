@@ -1,0 +1,206 @@
+@startuml sequence-checkout
+' BrewLite - Task 2.2: Sequence diagram cho UC-01 "Đặt và thanh toán đơn hàng"
+' Lifeline: Customer -> Next.js UI -> NestJS API -> Database -> Payment Service
+' Nguồn đối chiếu: usecase-spec-checkout.md (UC-01), srs.md (FR-17..FR-23, NFR-08),
+'   class-domain.puml, docs/architecture/architecture-overview.md (ADR-005, ADR-007)
+' Phiên bản 1.1: ghi sổ điểm LoyaltyTransaction (REDEEM, EARN); làm rõ giai đoạn 2-3 chỉ chạy khi đã có đơn PENDING;
+'   Payment Service là giao diện PaymentGateway, bản mô phỏng chạy trong cùng container API
+' Kết xuất: plantuml -tsvg sequence-checkout.puml
+title BrewLite – Sequence diagram: UC-01 Đặt và thanh toán đơn hàng
+
+autonumber
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign left
+skinparam maxMessageSize 280
+skinparam ParticipantPadding 20
+skinparam NoteBackgroundColor #FFF8E1
+skinparam NoteBorderColor #8D6E63
+skinparam SequenceGroupBodyBackgroundColor #FAFAFA
+
+actor "Customer\n(Khách hàng)" as C
+participant "Next.js UI" as UI
+participant "NestJS API" as API
+database "Database\n(PostgreSQL)" as DB
+participant "Payment Service\n(PaymentGateway – MoMo / VNPay mô phỏng)" as PAY
+
+' =====================================================================
+== Giai đoạn 1 – Tạo đơn: POST /orders (UC-01 bước 5–13) ==
+' =====================================================================
+C -> UI : Bấm "Xác nhận thanh toán"
+UI -> UI : Khóa nút, hiện "Đang xử lý thanh toán…"
+opt Còn đơn dang dở của lần trước
+  UI -> API : POST /orders/{id}/cancel
+  API --> UI : 200 (đã hoàn kho, mã, điểm)
+end
+UI -> API : POST /orders\nAuthorization: Bearer <JWT>\n{items[], couponCode?, pointsToUse?, note?}  (không có giá)
+API -> API : JwtAuthGuard xác thực JWT\nValidationPipe: whitelist + validate DTO
+
+alt JWT thiếu, sai hoặc hết hạn
+  API --> UI : 401 Unauthorized
+  UI --> C : Chuyển tới /login (giỏ hàng được giữ)
+else Dữ liệu không hợp lệ (giỏ rỗng, size/đường/đá sai, qty ngoài 1..20, > 30 dòng, ghi chú > 200 ký tự)
+  API --> UI : 400 Bad Request (thông báo tiếng Việt)
+  UI --> C : Hiển thị lỗi, giữ giỏ hàng, mở lại nút
+else JWT và dữ liệu hợp lệ
+  API -> DB : BEGIN transaction
+  API -> DB : SELECT Product (isActive), Topping (isActive)
+  DB --> API : products, toppings
+
+  alt Sản phẩm hoặc topping không tồn tại / ngừng bán
+    API -> DB : ROLLBACK
+    API --> UI : 400 Bad Request
+    UI --> C : Hiển thị lỗi, giữ giỏ hàng để khách sửa
+  else Hợp lệ
+    API -> API : Tính lại đơn giá và tạm tính\n(giá cơ bản + phụ phí size + topping) – không tin giá client
+
+    loop Mỗi sản phẩm (theo id tăng dần), tối đa 8 lần thử (optimistic locking)
+      API -> DB : SELECT stock, version
+      DB --> API : stock, version
+      API -> DB : UPDATE Product SET stock = stock - qty, version = version + 1\nWHERE id = ? AND version = <đã đọc>
+    end
+
+    alt Không đủ hàng hoặc tranh chấp tồn kho quá số lần thử
+      API -> DB : ROLLBACK (kho không đổi)
+      API --> UI : 409 Conflict ("hết hàng" / "chỉ còn N phần" / "nhiều khách đặt cùng lúc")
+      UI --> C : Hiển thị lỗi, giữ giỏ hàng
+    else Đã giữ đủ hàng
+      opt Có mã khuyến mãi
+        API -> DB : SELECT Promotion; kiểm tra bật, hạn dùng, lượt dùng, đơn tối thiểu
+        API -> DB : UPDATE Promotion SET usedCount = usedCount + 1
+      end
+      opt Dùng điểm thưởng
+        API -> DB : UPDATE User SET loyaltyPoints = loyaltyPoints - n\nWHERE id = ? AND loyaltyPoints >= n
+      end
+
+      alt Mã khuyến mãi hoặc điểm không hợp lệ
+        API -> DB : ROLLBACK (hoàn cả tồn kho đã giữ)
+        API --> UI : 400 Bad Request (lý do cụ thể)
+        UI --> C : Hiển thị lỗi, giữ giỏ hàng
+      else Hợp lệ
+        API -> DB : INSERT Order(PENDING, subtotal, discount, pointsUsed, total),\nOrderItem[], OrderStatusLog(PENDING)
+        opt Có dùng điểm thưởng
+          API -> DB : INSERT LoyaltyTransaction(REDEEM, -pointsUsed, orderId)
+        end
+        API -> DB : COMMIT
+        API --> UI : 201 Created {order}
+        UI -> UI : Lưu pendingOrderId
+      end
+    end
+  end
+end
+
+' =====================================================================
+== Giai đoạn 2 – Thanh toán: POST /payments (UC-01 bước 14–20) ==
+note over UI, API
+  Giai đoạn 2 và 3 chỉ thực hiện khi giai đoạn 1 trả 201 Created (đã có pendingOrderId).
+  Mọi nhánh lỗi của giai đoạn 1 kết thúc luồng tại chỗ đó.
+end note
+' =====================================================================
+UI -> UI : Sinh Idempotency-Key mới (8–100 ký tự)
+UI -> API : POST /payments\nAuthorization: Bearer <JWT>\nIdempotency-Key: <key>\n{orderId, method: WALLET | CARD}
+API -> API : JwtAuthGuard xác thực JWT\nKiểm tra độ dài Idempotency-Key
+
+alt JWT sai hoặc thiếu / sai Idempotency-Key
+  API --> UI : 401 Unauthorized / 400 Bad Request
+  UI --> C : Hiển thị lỗi, giữ giỏ hàng
+else Hợp lệ
+  API -> DB : SELECT Payment WHERE idempotencyKey = <key>
+  DB --> API : Payment hoặc không có
+
+  alt Key đã tồn tại (client gửi lại)
+    alt Key thuộc đơn hoặc khách khác
+      API --> UI : 422 Unprocessable Entity
+    else Giao dịch cũ vẫn PENDING
+      API --> UI : 409 Conflict ("đang được xử lý, vui lòng đợi")
+    else Giao dịch cũ đã xong
+      API --> UI : 200 {success, replayed: true, payment, order}\nKhông gọi Payment Service, không cộng điểm lần hai
+    end
+  else Key mới
+    API -> DB : BEGIN transaction (giữ chỗ khóa)
+    API -> DB : SELECT Order WHERE id = ? AND userId = ?
+    DB --> API : order
+    API -> DB : COUNT Payment(PENDING, tạo dưới 2 phút) của đơn
+    DB --> API : số giao dịch đang chờ
+
+    alt Đơn không tồn tại / không thuộc khách
+      API -> DB : ROLLBACK
+      API --> UI : 404 Not Found
+    else Đơn không ở PENDING / PAYMENT_FAILED hoặc đang có giao dịch chờ
+      API -> DB : ROLLBACK
+      API --> UI : 409 Conflict
+    else Được phép thanh toán
+      API -> DB : UPDATE Order SET version = version + 1 WHERE id = ? AND version = <đã đọc>
+      opt Đơn đang PAYMENT_FAILED (thử lại)
+        API -> DB : UPDATE Order → PENDING, INSERT OrderStatusLog(PENDING)
+      end
+      API -> DB : INSERT Payment(PENDING, idempotencyKey UNIQUE, amount = order.total)
+      API -> DB : COMMIT
+
+      note over API, DB
+        Hai request song song cùng key: một request INSERT thành công,
+        request còn lại vi phạm UNIQUE → trả kết quả đã có (replay) hoặc 409.
+      end note
+
+      API -> PAY : charge {orderId, amount = order.total, method}  (ngoài transaction)
+      note right of PAY : Số tiền lấy từ database,\nkhông nhận từ client
+
+      alt Thanh toán thành công
+        PAY --> API : ok, transactionId
+      else Bị từ chối hoặc hết thời gian chờ
+        PAY --> API : failed, failureReason
+      end
+
+      API -> DB : BEGIN transaction (ghi kết quả)
+      API -> DB : SELECT Order WHERE id = ?
+      DB --> API : order
+
+      alt Đơn đã bị hủy trong lúc chờ cổng thanh toán (status ≠ PENDING)
+        API -> DB : UPDATE Payment → REFUNDED (nếu cổng ok) hoặc FAILED
+        note right of DB : Đơn KHÔNG chuyển sang PAID
+      else Đơn vẫn PENDING
+        alt Thanh toán thành công
+          API -> DB : UPDATE Payment → SUCCESS (transactionId)
+          API -> DB : UPDATE Order → PAID (kiểm tra state machine + version),\nINSERT OrderStatusLog(PAID)
+          API -> DB : UPDATE Order SET pointsAwarded = true WHERE id = ? AND pointsAwarded = false
+          opt Cờ vừa được bật (lần đầu)
+            API -> DB : UPDATE User SET loyaltyPoints = loyaltyPoints + pointsEarned
+            API -> DB : INSERT LoyaltyTransaction(EARN, +pointsEarned, orderId)
+          end
+        else Thanh toán thất bại
+          API -> DB : UPDATE Payment → FAILED (failureReason)
+          API -> DB : UPDATE Order → PAYMENT_FAILED,\nINSERT OrderStatusLog(PAYMENT_FAILED)
+        end
+      end
+      API -> DB : COMMIT
+      API --> UI : 200 {success, replayed: false, payment, order}
+    end
+  end
+end
+
+' =====================================================================
+== Giai đoạn 3 – Thông báo kết quả cho khách ==
+' =====================================================================
+alt success = true
+  UI -> UI : Xóa giỏ hàng
+  UI -> API : GET /auth/me (làm mới điểm thưởng)
+  API --> UI : user
+  UI --> C : Chuyển tới /orders/{id}/success\n(mã đơn, tổng tiền, phương thức, mã giao dịch)
+else success = false (thanh toán thất bại)
+  UI --> C : Chuyển tới /orders/{id}/failed\nGiỏ hàng được giữ; nút "Thử lại", "Đổi phương thức", "Hủy đơn"
+else Mất kết nối mạng (không nhận được response)
+  UI --> C : "Mất kết nối tới máy chủ. Giỏ hàng vẫn được giữ, bạn thử lại nhé."
+end
+
+' =====================================================================
+== Client gửi lại yêu cầu thanh toán với cùng Idempotency-Key (A5) ==
+' =====================================================================
+C -> UI : Bấm lặp hoặc thử lại sau khi mạng chập chờn
+UI -> API : POST /payments (cùng Idempotency-Key, cùng orderId)
+API -> DB : SELECT Payment WHERE idempotencyKey = <key>
+DB --> API : Payment (SUCCESS hoặc FAILED)
+API --> UI : 200 {replayed: true, ...kết quả cũ}
+note over API, PAY : Payment Service KHÔNG bị gọi lần hai → không trừ tiền hai lần
+UI --> C : Hiển thị cùng một kết quả như lần đầu
+
+@enduml

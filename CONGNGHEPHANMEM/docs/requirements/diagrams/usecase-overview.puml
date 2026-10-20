@@ -1,0 +1,136 @@
+@startuml usecase-overview
+' BrewLite - Sơ đồ use-case tổng quát (Task 1.2) - v1.1
+' Thay đổi so với v1.0:
+'  - Hủy đơn chuyển sang Khách hàng (extend "Xem chi tiết & theo dõi đơn")
+'  - Gộp Đặt hàng + Thanh toán thành UC-01; thêm Kiểm tra tồn kho, Cộng điểm thưởng
+'  - Áp mã khuyến mãi, Dùng điểm thưởng extend UC-01
+'  - Thêm Đăng xuất, Quên mật khẩu, Tìm kiếm/lọc, Xem khuyến mãi, Theo dõi tiến trình đơn
+'  - Gắn mã UC; tô màu theo hiện trạng (xem chú giải)
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+skinparam usecase {
+  BorderColor #6F4E37
+  ArrowColor #333333
+}
+
+actor "Khách hàng" as KH
+actor "Nhân viên quầy" as NV
+actor "Quản lý" as QL
+actor "Cổng thanh toán\n(mô phỏng)" as PAY <<system>>
+
+QL --|> NV
+
+rectangle "Hệ thống BrewLite" {
+
+  ' ===== UC-02 Tài khoản & xác thực =====
+  usecase "Đăng ký" as UC_REG #E3F2E7;line:2F7D4F
+  usecase "Đăng nhập" as UC_LOGIN #E3F2E7;line:2F7D4F
+  usecase "Đăng xuất" as UC_LOGOUT #E3F2E7;line:2F7D4F
+  usecase "Quên mật khẩu" as UC_FORGOT #E3EEFB;line:2B5FA6
+
+  ' ===== UC-03 Thực đơn & sản phẩm =====
+  usecase "Xem menu" as UC_MENU #E3F2E7;line:2F7D4F
+  usecase "Tìm kiếm / lọc\ndanh mục" as UC_SEARCH #E3F2E7;line:2F7D4F
+  usecase "Xem chi tiết\nsản phẩm" as UC_DETAIL #E3F2E7;line:2F7D4F
+  usecase "Chọn size / topping /\nđường / đá" as UC_OPT #E3F2E7;line:2F7D4F
+  usecase "Xem khuyến mãi\nđang chạy" as UC_PROMO_LIST #E3F2E7;line:2F7D4F
+
+  ' ===== UC-04 Giỏ hàng =====
+  usecase "Quản lý giỏ hàng" as UC_CART #E3F2E7;line:2F7D4F
+  usecase "Ghi chú cho quầy" as UC_NOTE #E3F2E7;line:2F7D4F
+
+  ' ===== UC-01 Đặt & thanh toán (trọng tâm) =====
+  usecase "UC-01\nĐặt và thanh toán\nđơn hàng" as UC_CHECKOUT #E3F2E7;line:2F7D4F;line.bold
+  usecase "Kiểm tra tồn kho" as UC_STOCK #E3F2E7;line:2F7D4F
+  usecase "Thanh toán không\ndùng tiền mặt" as UC_PAY #E3F2E7;line:2F7D4F
+  usecase "Cộng điểm thưởng" as UC_EARN #E3F2E7;line:2F7D4F
+  usecase "Xử lý thanh toán\nthất bại" as UC_FAIL #E3F2E7;line:2F7D4F
+  usecase "Áp mã khuyến mãi" as UC_COUPON #E3F2E7;line:2F7D4F
+  usecase "Dùng điểm thưởng" as UC_POINTS #E3F2E7;line:2F7D4F
+
+  ' ===== UC-05 Theo dõi đơn hàng =====
+  usecase "Xem lịch sử đơn" as UC_HISTORY #E3F2E7;line:2F7D4F
+  usecase "Xem chi tiết &\ntheo dõi tiến trình" as UC_TRACK #E3F2E7;line:2F7D4F
+  usecase "Hủy đơn" as UC_CANCEL #E3F2E7;line:2F7D4F
+
+  ' ===== UC-06 Xử lý đơn tại quầy =====
+  usecase "Xem đơn cần pha" as UC_QUEUE #F2F2F2;line:888888;line.dashed
+  usecase "Cập nhật trạng thái\nđơn" as UC_STATUS #FFF0C9;line:A66F00
+
+  ' ===== UC-07 Quản trị cửa hàng =====
+  usecase "Quản lý sản phẩm\nvà tồn kho" as UC_PRODUCT #F2F2F2;line:888888;line.dashed
+  usecase "Quản lý mã khuyến mãi" as UC_PROMO_ADMIN #F2F2F2;line:888888;line.dashed
+  usecase "Quản lý tài khoản\nnhân viên" as UC_STAFFMGR #F2F2F2;line:888888;line.dashed
+  usecase "Xem báo cáo\ndoanh thu" as UC_REPORT #F2F2F2;line:888888;line.dashed
+}
+
+' ---------- Khách hàng ----------
+KH --> UC_REG
+KH --> UC_LOGIN
+KH --> UC_LOGOUT
+KH --> UC_MENU
+KH --> UC_PROMO_LIST
+KH --> UC_CART
+KH --> UC_CHECKOUT
+KH --> UC_HISTORY
+KH --> UC_TRACK
+KH --> UC_CANCEL
+
+' ---------- Nhân viên ----------
+NV --> UC_LOGIN
+NV --> UC_LOGOUT
+NV --> UC_QUEUE
+NV --> UC_STATUS
+
+' ---------- Quản lý ----------
+QL --> UC_PRODUCT
+QL --> UC_PROMO_ADMIN
+QL --> UC_STAFFMGR
+QL --> UC_REPORT
+
+' ---------- Tài khoản ----------
+UC_FORGOT .> UC_LOGIN : <<extend>>
+
+' ---------- Thực đơn ----------
+UC_SEARCH .> UC_MENU : <<extend>>
+UC_DETAIL .> UC_MENU : <<extend>>
+UC_OPT .> UC_DETAIL : <<extend>>
+
+' ---------- Giỏ hàng ----------
+UC_NOTE .> UC_CART : <<extend>>
+
+' ---------- UC-01 ----------
+UC_CHECKOUT .> UC_LOGIN : <<include>>
+UC_CHECKOUT .> UC_STOCK : <<include>>
+UC_CHECKOUT .> UC_PAY : <<include>>
+UC_PAY .> UC_EARN : <<include>>
+UC_FAIL .> UC_PAY : <<extend>>
+UC_COUPON .> UC_CHECKOUT : <<extend>>
+UC_POINTS .> UC_CHECKOUT : <<extend>>
+UC_PAY -- PAY
+
+' ---------- Theo dõi đơn ----------
+UC_HISTORY .> UC_LOGIN : <<include>>
+UC_TRACK .> UC_HISTORY : <<extend>>
+UC_CANCEL .> UC_TRACK : <<extend>>
+
+' ---------- Xử lý đơn ----------
+UC_STATUS .> UC_QUEUE : <<include>>
+
+legend right
+  **Hiện trạng**
+  |<#E3F2E7> | Đã có trên web |
+  |<#FFF0C9> | Có API, chưa có giao diện |
+  |<#E3EEFB> | Có giao diện, chưa có API |
+  |<#F2F2F2> | Chưa làm (mở rộng) |
+endlegend
+
+note right of UC_CHECKOUT
+  Use-case trọng tâm (Task 1.3).
+  Chi tiết: usecase-checkout.puml
+end note
+
+@enduml

@@ -1,0 +1,131 @@
+@startuml deployment-diagram
+' BrewLite - Task 3.2: UML Deployment diagram (môi trường production) - v1.0
+' Nền tảng đề xuất: Render (region Singapore) + GitHub Container Registry (ghcr.io) + GitHub Actions
+' LƯU Ý: nền tảng là ĐỀ XUẤT (ADR-008, trạng thái "chờ nhóm xác nhận").
+'        Nếu nhóm chọn nền tảng khác, sửa tên node, cổng, cách gọi deploy trong sơ đồ này
+'        để sơ đồ phản ánh đúng nền tảng thực tế (đề bài mục 5.2).
+' Nguồn: docs/architecture/architecture-overview.md (mục 3, 8, 13), adr/008, adr/009
+' Kết xuất: plantuml -tsvg deployment-diagram.puml
+title BrewLite – Deployment diagram (production)
+
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam NoteBackgroundColor #FFF8E1
+skinparam NoteBorderColor #8D6E63
+skinparam nodeBackgroundColor #FFFFFF
+skinparam frameBorderColor #8D6E63
+
+' =====================================================================
+' RANH GIỚI 1 - LOCAL
+' =====================================================================
+frame "RANH GIỚI LOCAL – máy lập trình viên" #F5F5F5 {
+  node "Máy lập trình viên\n<<device>>" as DEV {
+    node "Docker Compose\n<<execution environment>>" as COMPOSE {
+      node "web\n<<container>>\n:3000" as L_WEB
+      node "api\n<<container>>\n:4000" as L_API
+      database "db (PostgreSQL)\n<<container>>\n:5432\nvolume: pgdata" as L_DB
+    }
+    artifact ".env (không commit)\n.env.example (commit)" as L_ENV
+  }
+}
+
+' =====================================================================
+' RANH GIỚI 2 - CI
+' =====================================================================
+frame "RANH GIỚI CI – GitHub" #EEF3FB {
+  node "GitHub Actions runner\n<<execution environment>>\nubuntu-latest" as RUNNER {
+    component "ci.yml\ninstall, lint, test, build\n(mỗi pull request)" as CI_JOB
+    component "cd.yml\nlint, test, build, docker build,\npush, deploy, smoke test\n(push main hoặc tag vX.Y.Z)" as CD_JOB
+  }
+  artifact "GitHub Secrets\nRENDER_DEPLOY_HOOK_API\nRENDER_DEPLOY_HOOK_WEB\nGITHUB_TOKEN (push GHCR)" as GH_SECRETS
+}
+
+cloud "Container Registry\nGitHub Container Registry (ghcr.io)" as REG {
+  artifact "ghcr.io/<org>/brewlite-api:<commit-sha>\nghcr.io/<org>/brewlite-web:<commit-sha>" as IMAGES
+}
+
+' =====================================================================
+' RANH GIỚI 3 - PRODUCTION
+' =====================================================================
+node "Thiết bị người dùng\n<<device>>\nđiện thoại / máy tính" as USERDEV {
+  node "Trình trình duyệt / PWA\n<<execution environment>>" as BROWSER
+}
+
+frame "RANH GIỚI PRODUCTION – Render (region Singapore)" #E8F5E9 {
+
+  node "Render edge\n<<load balancer>>\nTLS (HTTPS 443), CDN cho tệp tĩnh" as EDGE
+
+  node "Web Service: brewlite-web\n<<container>>\ncổng 3000" as P_WEB {
+    component "Next.js server\n(App Router)" as NEXT
+    artifact "Env: NEXT_PUBLIC_API_URL\n(không chứa secret)" as WEB_ENV
+  }
+
+  node "Web Service: brewlite-api\n<<container>>\ncổng 4000" as P_API {
+    component "NestJS API\n(modular monolith)" as NEST
+    component "MockPaymentGateway\n(trong cùng tiến trình)" as MOCKPAY
+    component "Prisma Client\nmigrate deploy khi khởi động" as PRISMA
+    artifact "Env (secret):\nDATABASE_URL, JWT_SECRET,\nCORS_ORIGIN, PAYMENT_MOCK_*,\nLOG_LEVEL, API_PORT" as API_ENV
+  }
+
+  node "Mạng nội bộ (private network)\nkhông truy cập từ Internet" as PRIVNET {
+    database "PostgreSQL (managed)\n<<database>>\ncổng 5432\nlưu trữ bền (persistent storage)\ntruy cập ngoài: tắt" as P_DB
+  }
+
+  artifact "Log: stdout\n→ Render Logs" as LOGS
+}
+
+' ===================== KẾT NỐI: NGƯỜI DÙNG =====================
+BROWSER --> EDGE : HTTPS 443\n(tải web và gọi API)
+EDGE --> P_WEB : HTTP :3000\n(brewlite-web.onrender.com)
+EDGE --> P_API : HTTP :4000\n(brewlite-api.onrender.com)\nHealth check: GET /health
+P_WEB ..> P_API : (không gọi trực tiếp;\ntrình duyệt gọi API, CORS)
+
+' ===================== KẾT NỐI: NỘI BỘ =====================
+NEST --> MOCKPAY : gọi hàm
+NEST --> PRISMA
+PRISMA --> P_DB : PostgreSQL TCP 5432\n(Internal Database URL)
+
+' ===================== KẾT NỐI: LOCAL =====================
+L_WEB --> L_API : HTTP :4000
+L_API --> L_DB : TCP :5432
+L_ENV ..> COMPOSE : biến môi trường
+
+' ===================== KẾT NỐI: CI / CD =====================
+CI_JOB ..> GH_SECRETS : (CI không dùng secret deploy)
+CD_JOB --> IMAGES : docker push (HTTPS)\nGITHUB_TOKEN
+IMAGES --> P_API : Render kéo image (pull)\nbằng registry credential
+IMAGES --> P_WEB : Render kéo image (pull)
+CD_JOB --> EDGE : Deploy hook (HTTPS POST)\nsecret trong GitHub Secrets
+CD_JOB ..> P_API : Smoke test: GET /health\nGET /products
+CD_JOB ..> P_WEB : Smoke test: GET /menu
+
+P_API ..> LOGS
+P_WEB ..> LOGS
+
+' ===================== GHI CHÚ =====================
+note bottom of P_API
+  Health check: GET /health (200 khi DB ổn, 503 khi DB lỗi).
+  Nếu bản mới không qua health check, nền tảng giữ bản cũ đang chạy.
+  Rollback: triển khai lại image tag trước đó (xem docs/deployment.md).
+end note
+
+note bottom of P_DB
+  Chỉ API kết nối được (Internal URL).
+  Migration chạy bằng "prisma migrate deploy" khi API khởi động.
+  Gói miễn phí có thể hết hạn: xem ADR-008, rủi ro AR-02.
+end note
+
+note right of EDGE
+  HTTPS bắt buộc (NFR-07).
+  Web và API là hai origin khác nhau:
+  API bật CORS cho đúng origin của web.
+end note
+
+note bottom of GH_SECRETS
+  Secret không nằm trong repository và không in ra log CI.
+  Secret runtime (DATABASE_URL, JWT_SECRET...) đặt ở Render Environment.
+end note
+
+@enduml
