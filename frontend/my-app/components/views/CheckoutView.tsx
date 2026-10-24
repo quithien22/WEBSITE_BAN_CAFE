@@ -193,7 +193,7 @@ export default function CheckoutView() {
         api.auth.me().then(setUser).catch(() => {});
         router.replace(`/orders/${order.id}/success`);
       } else {
-        // Trạng thái PAYMENT_FAILED: không xóa giỏ hàng.
+        // Trạng thái PAYMENT_FAILED: không xóa giỏ hàng
         router.replace(`/orders/${order.id}/failed`);
       }
     } catch (err) {
