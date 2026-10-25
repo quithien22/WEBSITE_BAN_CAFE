@@ -1,3 +1,4 @@
+// Backend: Home products logic
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
