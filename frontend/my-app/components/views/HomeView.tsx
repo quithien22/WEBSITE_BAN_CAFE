@@ -1,3 +1,4 @@
+// Frontend: HomeView component
 import Link from "next/link";
 import FeaturedProducts from "@/components/product/FeaturedProducts";
 import { btnOutline, btnPrimary, container } from "@/components/ui/classes";

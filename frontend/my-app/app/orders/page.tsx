@@ -1,3 +1,4 @@
+// Order history page route
 import type { Metadata } from "next";
 import OrdersView from "@/components/views/OrdersView";
 

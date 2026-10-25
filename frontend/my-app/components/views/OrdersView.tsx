@@ -1,3 +1,4 @@
+// Frontend: OrdersView component
 "use client";
 
 import Link from "next/link";
